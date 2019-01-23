@@ -29,33 +29,30 @@ package org.firstinspires.ftc.teamcode
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import android.graphics.Color
-
-import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.util.Range
 
-import org.firstinspires.ftc.teamcode.smsHardware
-
-@TeleOp(name = "10644", group = "Pushbot")
-class smsHolonomic10644 : LinearOpMode() {
+@TeleOp(name = "15555", group = "Pushbot")
+class smsHolonomic15555 : LinearOpMode() {
 
     /* Declare OpMode members. */
     internal var robot = smsHardware()   // Use a Pushbot's hardware
     internal var hsvValues = FloatArray(3)
     internal val values = hsvValues
-    internal var armNominalPower = 0.3f
-    internal var driveNominalPower = 0.3f
+
     internal var amPos: Int = 0
     internal var aePos: Int = 0
+    internal var colPos: Int = 0
     internal var aeOffset: Int = 0
+    internal var armNominalPower = 0.3f
+    internal var driveNominalPower = 0.3f
+
     internal var previousDPD = false
     internal var previousDPU = false
     internal var previousDPL = false
     internal var previousDPR = false
-
 
     @Override
     fun runOpMode() {
@@ -64,14 +61,18 @@ class smsHolonomic10644 : LinearOpMode() {
          * The init() method of the hardware class does all the work here
          */
         robot.init(hardwareMap, false)
+        if (robot.armMove != null) {
+            robot.armMove.setDirection(DcMotor.Direction.REVERSE)
+        }
+        if (robot.armExtend != null) {
+            robot.armExtend.setDirection(DcMotor.Direction.REVERSE)
+        }
 
         // Send telemetry message to signify robot waiting;
-        telemetry.addData("Say", "Hello Driver")    //
+        telemetry.addData("Say", "Hello Saline FTC Robotics")    //
         telemetry.update()
         var powerReducer = 0.5f
         // Wait for the game to start (driver presses PLAY)
-
-
 
 
         waitForStart()
@@ -84,71 +85,85 @@ class smsHolonomic10644 : LinearOpMode() {
             val gamepad1RightX = gamepad1.right_stick_x
 
             // holonomic formulas
-            /*float FrontLeft = -gamepad1LeftY - gamepad1LeftX - gamepad1RightX;
-            float FrontRight = gamepad1LeftY - gamepad1LeftX - gamepad1RightX;
-            float BackRight = gamepad1LeftY + gamepad1LeftX - gamepad1RightX;
-            float BackLeft = -gamepad1LeftY + gamepad1LeftX - gamepad1RightX;
-            */
+            var FrontRight = gamepad1LeftY + gamepad1LeftX - gamepad1RightX
+            var FrontLeft = gamepad1LeftY - gamepad1LeftX + gamepad1RightX
+            var BackRight = gamepad1LeftY - gamepad1LeftX - gamepad1RightX
+            var BackLeft = gamepad1LeftY + gamepad1LeftX + gamepad1RightX
 
-            var FrontRight = gamepad1LeftY - gamepad1LeftX - gamepad1RightX
-            var FrontLeft = gamepad1LeftY + gamepad1LeftX + gamepad1RightX
-            var BackRight = gamepad1LeftY + gamepad1LeftX - gamepad1RightX
-            var BackLeft = gamepad1LeftY - gamepad1LeftX + gamepad1RightX
-
-            val gamepad2LeftY = -gamepad2.left_stick_y
+            val gamepad2LeftY = gamepad2.left_stick_y
             val gamepad2RightY = -gamepad2.right_stick_y
             val gamepad2RightTrigger = gamepad2.right_trigger
             val gamepad2LeftTrigger = gamepad2.left_trigger
 
-            var armMove = Range.clip(gamepad2LeftY, -1, 1) * armNominalPower  // cap the arm-move to 50% but without clipping
-            val armEx = Range.clip(gamepad2RightY, -1, 1) * 0.2f   // cap the arm-extend to 20% but without clipping
+            // Allow driver to select Tank vs POV by pressing START
+            var dpad_check = gamepad2.dpad_up
+            if (dpad_check && dpad_check != previousDPU) {
+                aeOffset += 100
+            }
+            previousDPU = dpad_check
 
-            // clip the right/left values so that the values never exceed +/- 1
-            FrontRight = Range.clip(FrontRight, -1, 1)
-            FrontLeft = Range.clip(FrontLeft, -1, 1)
-            BackLeft = Range.clip(BackLeft, -1, 1)
-            BackRight = Range.clip(BackRight, -1, 1)
+            dpad_check = gamepad2.dpad_down
+            if (dpad_check && dpad_check != previousDPD) {
+                aeOffset -= 100
+            }
+            previousDPD = dpad_check
+
+            var armMove = Range.clip(gamepad2LeftY, -1, 1) * armNominalPower  // cap the arm-move to 50% but without clipping
+            var armEx = Range.clip(gamepad2RightY, -1f, 1f)   // cap the arm-extend to 20% but without clipping
+            if (gamepad2.right_trigger === 0) {
+                armEx *= armNominalPower   // cap the arm-extend to 20% but without clipping
+            }
 
             powerReducer = driveNominalPower
+            if (gamepad1.right_trigger > 0) {
+                powerReducer = 1.0f
+            }
+            if (gamepad1.left_trigger > 0) {
+                powerReducer = 0.1f
+            }
 
-            check_dpad(); // ln 181
+            // clip the right/left values so that the values never exceed +/- 1
+            FrontRight = Range.clip(FrontRight, -1, 1) * powerReducer
+            FrontLeft = Range.clip(FrontLeft, -1, 1) * powerReducer
+            BackLeft = Range.clip(BackLeft, -1, 1) * powerReducer
+            BackRight = Range.clip(BackRight, -1, 1) * powerReducer
+
 
             // write the values to the motors
 
-            if (robot.frontRightDrive != null) {
-                robot.frontRightDrive.setPower(FrontRight * powerReducer)
-            }
-            if (robot.frontLeftDrive != null) {
-                robot.frontLeftDrive.setPower(FrontLeft * powerReducer)
-            }
-            if (robot.rearLeftDrive != null) {
-                robot.rearLeftDrive.setPower(BackLeft * powerReducer)
-            }
-            if (robot.rearRightDrive != null) {
-                robot.rearRightDrive.setPower(BackRight * powerReducer)
-            }
+            robot.frontRightDrive.setPower(FrontRight)
+            robot.frontLeftDrive.setPower(FrontLeft)
+            robot.rearLeftDrive.setPower(BackLeft)
+            robot.rearRightDrive.setPower(BackRight)
 
             if (robot.collector != null) {
+                robot.collector.setMode(DcMotor.RunMode.RUN_TO_POSITION)
                 if (gamepad2LeftTrigger > 0f) {
-                    robot.collector.setPower(1)
+                    colPos = 3450
                 } else if (gamepad2RightTrigger > 0f) {
-                    robot.collector.setPower(-1)
+                    colPos = 0
                 } else {
-                    robot.collector.setPower(0)
+                    colPos = -1
                 }
+
+                if (colPos >= 0) {
+                    robot.collector.setTargetPosition(colPos)
+                    robot.collector.setPower(1.0f)
+                } else {
+                    robot.collector.setPower(0.0f)
+                }
+
+                colPos = robot.collector.getCurrentPosition()
             }
 
             if (robot.armMove != null) {
                 robot.armMove.setMode(DcMotor.RunMode.RUN_TO_POSITION)
                 if (gamepad2.y) {
-                    amPos = 2500
+                    amPos = 2000
                     armMove = armNominalPower
-                } else if (gamepad2.a) {
-                    amPos = 0
-                    armMove = 1.0f
                 } else {
                     amPos = robot.armMove.getCurrentPosition() + armMove / Math.abs(armMove) * 100
-                    amPos = Range.clip(amPos, 0, 8100)
+                    amPos = Range.clip(amPos, 0, 4250)
                 }
                 robot.armMove.setTargetPosition(amPos)
                 robot.armMove.setPower(Math.abs(armMove))
@@ -157,14 +172,27 @@ class smsHolonomic10644 : LinearOpMode() {
             }
 
             if (robot.armExtend != null) {
-                //this code is for the motorized collector
-                robot.armExtend.setMode(DcMotor.RunMode.RUN_TO_POSITION)
-                robot.armExtend.setTargetPosition((aeOffset + amPos / 7.11).toInt()) // based on a double 15:40 tooth reduction setup
-                robot.armExtend.setPower(0.2f)
+                //robot.armExtend.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                //    this code is for the motorized collector
+                //    robot.armExtend.setTargetPosition((int)(aeOffset + amPos / 7.11)); // based on a double 15:40 tooth reduction setup
+                //    robot.armExtend.setPower(0.2f);
 
                 // this code is for the 4-link / passive collector
-                //robot.armExtend.setPower(armEx);
-                //aePos = robot.armExtend.getCurrentPosition();
+
+                robot.armExtend.setMode(DcMotor.RunMode.RUN_USING_ENCODER)
+                //armEx = Range.clip(armEx,-0.5f,0.5f);
+                robot.armExtend.setPower(armEx)
+                /*
+                aePos = (int) (robot.armExtend.getCurrentPosition());
+                if (armEx != 0) {
+                    aePos += (armEx*25 / Math.abs(armEx));
+                    aePos = Range.clip(aePos,0,120);
+                    robot.armExtend.setTargetPosition(aePos); // based on a double 15:40 tooth reduction setu
+                    robot.armExtend.setPower(1.0f);
+                } else {
+                    robot.armExtend.setPower(0.0f);
+                }*/
+                aePos = robot.armExtend.getCurrentPosition()
             }
 
             //print out motor values
@@ -177,46 +205,9 @@ class smsHolonomic10644 : LinearOpMode() {
                     .addData("armExtendPower", armEx)
                     .addData("armMove ", amPos)
                     .addData("armMovePower", armMove)
+                    .addData("HangMotorPosition", colPos)
 
             telemetry.update()
-
-            /*   functions   */
-
-            fun check_dpad() Int {
-                if (gamepad1.right_trigger > 0) {
-                    powerReducer = 1.0f
-                }
-                if (gamepad1.left_trigger > 0) {
-                    powerReducer = 0.1f
-                }
-
-                // Allow driver to select Tank vs POV by pressing START
-                var dpad_check = gamepad2.dpad_up
-                if (dpad_check && dpad_check != previousDPU) {
-                    aeOffset += 25
-                }
-                previousDPU = dpad_check
-
-                dpad_check = gamepad2.dpad_down
-                if (dpad_check && dpad_check != previousDPD) {
-                    aeOffset -= 25
-                }
-                previousDPD = dpad_check
-
-                dpad_check = gamepad2.dpad_left
-                if (dpad_check && dpad_check != previousDPL) {
-                    armNominalPower -= 0.05f
-                }
-                previousDPL = dpad_check
-
-                dpad_check = gamepad2.dpad_right
-                if (dpad_check && dpad_check != previousDPR) {
-                    armNominalPower += 0.05f
-                }
-                previousDPR = dpad_check
-                return 0
-            }
         }
     }
-
 }
