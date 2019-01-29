@@ -111,7 +111,11 @@ class smsHolonomic10644 : LinearOpMode() {
 
             powerReducer = driveNominalPower
 
-            check_dpad(); // ln 181
+            val err = check_gamepad(); // ln 181
+            val is_err = false
+            if (err != 0) {
+              is_err = true
+            }
 
             // write the values to the motors
 
@@ -177,12 +181,13 @@ class smsHolonomic10644 : LinearOpMode() {
                     .addData("armExtendPower", armEx)
                     .addData("armMove ", amPos)
                     .addData("armMovePower", armMove)
+                    .addData("Err reading gamepad: ", is_err)
 
             telemetry.update()
 
             /*   functions   */
 
-            fun check_dpad() Int {
+            fun check_gamepad() Int {
                 if (gamepad1.right_trigger > 0) {
                     powerReducer = 1.0f
                 }
