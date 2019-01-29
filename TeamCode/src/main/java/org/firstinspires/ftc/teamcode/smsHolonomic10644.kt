@@ -66,7 +66,7 @@ class smsHolonomic10644 : LinearOpMode() {
         robot.init(hardwareMap, false)
 
         // Send telemetry message to signify robot waiting;
-        telemetry.addData("Say", "Hello Driver")    //
+        telemetry.addData("Say", "Hello driver\nI'm ready\n-------------------------")
         telemetry.update()
         var powerReducer = 0.5f
         // Wait for the game to start (driver presses PLAY)
