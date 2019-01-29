@@ -110,26 +110,19 @@ class smsHolonomic10644 : LinearOpMode() {
             BackRight = Range.clip(BackRight, -1, 1)
 
             powerReducer = driveNominalPower
-
+            
+            /* check gamepad values */
             val err = check_gamepad(); // ln 181
             val is_err = false
             if (err != 0) {
               is_err = true
             }
-
-            // write the values to the motors
-
-            if (robot.frontRightDrive != null) {
-                robot.frontRightDrive.setPower(FrontRight * powerReducer)
-            }
-            if (robot.frontLeftDrive != null) {
-                robot.frontLeftDrive.setPower(FrontLeft * powerReducer)
-            }
-            if (robot.rearLeftDrive != null) {
-                robot.rearLeftDrive.setPower(BackLeft * powerReducer)
-            }
-            if (robot.rearRightDrive != null) {
-                robot.rearRightDrive.setPower(BackRight * powerReducer)
+            
+            /* write the values to the motors */
+            val write_err = write_to_motors() // ln 211
+            val is_write_err = false
+            if (write_err != 0) {
+              is_write_err = true
             }
 
             if (robot.collector != null) {
@@ -172,22 +165,14 @@ class smsHolonomic10644 : LinearOpMode() {
             }
 
             //print out motor values
-            telemetry.addLine()
-                    .addData("front right", FrontRight)
-                    .addData("front left", FrontLeft)
-                    .addData("back left", BackLeft)
-                    .addData("back right", BackRight)
-                    .addData("armExtend ", aePos)
-                    .addData("armExtendPower", armEx)
-                    .addData("armMove ", amPos)
-                    .addData("armMovePower", armMove)
-                    .addData("Err reading gamepad: ", is_err)
-
+            telemetry.addLine().addData("front right", FrontRight).addData("front left", FrontLeft).addData("back left", BackLeft).addData("back right", BackRight).addData("armExtend ", aePos).addData("armExtendPower", armEx).addData("armMove ", amPos).addData("armMovePower", armMove)
+                    
             telemetry.update()
+
 
             /*   functions   */
 
-            fun check_gamepad() Int {
+            fun check_dpad() Int {
                 if (gamepad1.right_trigger > 0) {
                     powerReducer = 1.0f
                 }
@@ -222,6 +207,22 @@ class smsHolonomic10644 : LinearOpMode() {
                 return 0
             }
         }
+    }
+    
+    fun write_to_motors() Int {
+      if (robot.frontRightDrive != null) {
+        robot.frontRightDrive.setPower(FrontRight * powerReducer)
+      }
+      if (robot.frontLeftDrive != null) {
+        robot.frontLeftDrive.setPower(FrontLeft * powerReducer)
+      }
+      if (robot.rearLeftDrive != null) {
+        robot.rearLeftDrive.setPower(BackLeft * powerReducer)
+      }
+      if (robot.rearRightDrive != null) {
+        robot.rearRightDrive.setPower(BackRight * powerReducer)
+      }
+      return 0
     }
 
 }
